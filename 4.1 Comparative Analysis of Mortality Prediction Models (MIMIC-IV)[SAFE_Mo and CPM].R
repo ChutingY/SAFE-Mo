@@ -1,9 +1,8 @@
-memory.limit(102400)#扩大内存
 getwd()
 setwd("F:\\burnburnburn\\MIMIC\\8.0\\train")
 rm(list = ls())
 .libPaths("D://Rmua")
-library(lattice) #调入函数包
+library(lattice)
 library(MASS)
 library(nnet)
 library(mice)
@@ -12,28 +11,21 @@ library(ranger)
 library(mlr3verse)
 library(dplyr)
 library(ggplot2)
-library(dplyr)
 library(forcats)
 library(VIM)
 library(ROCR) 
 library(pROC)
+library(survival)
+library(rms)
+library(PredictABEL)
+library(rmda)
+library(ggDCA)
+library(caret)
 
-data <- read.csv(".\\4.comparation\\data_prepared.csv",header = T,row.names = 1)
+data <- read.csv("data_prepared.csv",header = T,row.names = 1)
 table(data$OS_26DAY)
 mydata<-na.omit(data)
-########################################################################################
-# 1.快速统计描述 #######################################################################
-########################################################################################
-library(scitb)
-allVars<-c("SAFE_Mo","CPM")
-strata<-"OS_26DAY"
-table1<-scitb1(vars=allVars,strata=strata,data=mydata, atotest=T,statistic=T,Overall=T) 
-table1
-write.csv(table1,file= ".\\4.comparation\\1 快速组间比较.csv",row.names = F)
-
-########################################################################################
-# 2. 批量单因素分析 ####################################################################
-########################################################################################
+# 1. Logistic analysis ####################################################################
 mydata$OS_26DAY[mydata$OS_26DAY == 2] <- 0
 fit<- glm(OS_26DAY~Charlson+Apsiii+Sapsii+SOFA+SAFE_Mo+CPM,family=binomial(link = "logit"),data = mydata)
 autoReg(fit,uni=TRUE,threshold=0.05)
@@ -41,9 +33,7 @@ result<-autoReg(fit, uni=TRUE) %>% myft()
 result
 table2docx(result)
 
-########################################################################################
-# 3. ROC ###############################################################################
-########################################################################################
+# 2. ROC ###############################################################################
 models_name <- c("SAFE_Mo","CPM")
 dfm <- data.frame()
 for (model in models_name) {
@@ -63,9 +53,7 @@ for (model in models_name) {
   dfm <- rbind(dfm, m1)
 }
 
-# 画图
-require(ggplot2)
-ggplot(dfm,aes(x = 1-FPR, y = 1-TPR,color=label)) +
+ggplot(dfm,aes(x = 1-FPR, y = TPR,color=label)) +
   geom_path(size =0.8) +
   labs(title= "ROC curve", x = "False Positive Rate (1-Specificity)", y = "True Positive Rate (Sensitivity)")+
   scale_color_manual(values = colorRampPalette(c("#0071C2", "#D75615", "#EDB11A", "#7E318A", "#78AB31","#2A77AC","#D55535"))(10))+                 
@@ -76,14 +64,7 @@ ggplot(dfm,aes(x = 1-FPR, y = 1-TPR,color=label)) +
         legend.background = element_rect(fill=NULL, size=0.5,  linetype="solid", colour ="black"))
 ggsave(".\\4.comparation\\3. ROC_OS_26DAY.pdf",width = 10,height = 7)
 
-########################################################################################
-# 4. DCA ###############################################################################
-########################################################################################
-library(rmda)
-library(ggDCA)
-library(ggplot2)
-library(rms)
-library(caret)
+# 3. DCA ###############################################################################
 set.seed(123)
 data <- read.csv(".\\4.comparation\\data_prepared.csv",header = T,row.names = 1)
 head(data)
@@ -103,22 +84,14 @@ plot_decision_curve(results[["SAFE_Mo curve"]],  curve.names = "SAFE_Mo curve",
                     confidence.intervals=FALSE,
                     standardize = FALSE)
 
-pdf(".\\4.comparation\\4.DCA_PLOT.pdf",width = 10,height = 7)
 plot_decision_curve(results, 
                     curve.names = c( "SAFE_Mo curve","CPM curve"), 
                     col = colorRampPalette(c("#0071C2", "#D75615", "#EDB11A", "#7E318A", "#78AB31","#2A77AC","#D55535"))(9), 
                     confidence.intervals = FALSE,  #remove confidence intervals
                     cost.benefit.axis = FALSE, #remove cost benefit axis
                     legend.position = "topright")
-dev.off()
 
-########################################################################################
-# 5. 校准曲线 (Calibration curve) ######################################################
-########################################################################################
-# Calibration,校准度，指模型预测的结局发生的概率与实际观测概率的一致程度。 
-library(survival)
-library(rms)
-library(PredictABEL)
+# 4. Calibration curve #################################################################
 variables <- models_name
 results <- list()
 for (var in variables) {
@@ -127,9 +100,7 @@ for (var in variables) {
   cal <- calibrate(result,  method = "boot", B = 1000)# method设置抽样的方法为bootstrap，B设置bootstrap的次数为1000。
   results[[paste( var)]] <- cal
 }
-plot(results[["SAFE_Mo"]], xlab = "Predicted Survival", ylab = "Actual Survival",main = "Calibration Curve")
 
-pdf(".\\4.comparation\\5.校准曲线 (Calibration curve).pdf",width = 7,height = 7)
 plot(1,type = "n",
      xlim = c(0,1),ylim = c(0,1),
      xaxs = "i",yaxs = "i",
@@ -139,14 +110,11 @@ plot(1,type = "n",
 abline(0,1,col="black",lty=2,lwd=2)
 lines(results[["SAFE_Mo"]][,c("predy","calibrated.orig")],lty=1,lwd=2,col="#0071C2")
 lines(results[["CPM"]][,c("predy","calibrated.orig")],lty=1,lwd=2,col="#D55535")
-legend(0.01,0.98,c("Charlson's Calibration curve", "Apsiii's Calibration curve",
-                   "Sapsii's Calibration curve",  "SOFA's Calibration curve",
-                   "SAFE_Mo's Calibration curve"),
+legend(0.01,0.98,c("SAFE_Mo's Calibration curve","CPM's Calibration curve"),
        col = colorRampPalette(c("#0071C2","#2A77AC" ,"#78AB31", "#7E318A", "#D75615", "#EDB11A","#D55535"))(2),
        lty = c(1,1,1,1,1,1,1,1,1),
        lwd = c(2,2,2,2,2,2,2,2,2),
-       bty="n",cex=1) #"o"为加边框
-dev.off()
+       bty="n",cex=1)
 
 
 
