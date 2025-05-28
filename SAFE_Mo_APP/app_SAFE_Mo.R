@@ -16,6 +16,7 @@ lapply(required_packages, require, character.only = TRUE)
 
 data <- read.csv("data.csv",header = T,row.names = 1)
 load(file = "SAFE_Mo_model.Rdata")
+load(file = "Index.Rdata")
 data$OS_26DAY <- as.factor(data$OS_26DAY)
 train <-  data[index,];train$OS_26DAY <- as.factor(make.names(train$OS_26DAY))
 test <-   data[-index,];test$OS_26DAY <- as.factor(make.names(test$OS_26DAY))
