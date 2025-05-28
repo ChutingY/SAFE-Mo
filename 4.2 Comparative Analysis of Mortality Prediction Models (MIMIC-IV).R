@@ -1,12 +1,3 @@
-rm(list = ls())
-required_packages <- c(
-  "lattice", "MASS", "nnet", "mice", "foreign",
-  "ranger", "mlr3verse", "dplyr", "ggplot2",
-  "forcats", "VIM", "ROCR", "pROC", "PerformanceAnalytics",
-  "scitb", "autoReg", "rrtable", "rmda", "ggDCA",
-  "caret", "survival", "rms", "PredictABEL"
-)
-
 invisible(lapply(required_packages, function(pkg) {
   if (!require(pkg, character.only = TRUE)) {
     install.packages(pkg)
@@ -110,7 +101,6 @@ cal_models <- lapply(models_name, function(x) {
 names(cal_models) <- models_name
 
 # Publication calibration plot
-pdf("./4.comparation/5_calibration_curves.pdf", width = 8, height = 8)
 plot(0:1, 0:1, type = "n",
      xlab = "Predicted Probability", ylab = "Observed Probability",
      main = "Calibration Curves", cex.lab = 1.2)
@@ -121,17 +111,6 @@ for (i in seq_along(cal_models)) {
   lines(cal_models[[i]][, "predy"], cal_models[[i]][, "calibrated.orig"],
         col = colors[i], lwd = 2)
 }
-
-legend("bottomright",
-       legend = c("Charlson", "APACHE III", "SAPS II", "SOFA", "SAFE-Mo"),
+legend("bottomright",legend = c("Charlson", "APACHE III", "SAPS II", "SOFA", "SAFE-Mo"),
        col = colors, lwd = 2, cex = 0.9, bty = "n")
-dev.off()
-
-
-
-
-
-
-
-
 
