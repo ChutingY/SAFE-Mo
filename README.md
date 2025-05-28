@@ -10,7 +10,7 @@ Sepsis-associated acute respiratory distress syndrome (ARDS) carries a high mort
 - Real-time mortality probability calculation
 - Model interpretability outputs (risk factors)
 
-### Modeling Code
+### Modeling Code(code/)
 
 - Full pipeline for transparency and reproducibility:
 - Data preprocessing scripts
