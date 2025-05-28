@@ -17,7 +17,7 @@ library(mlr3verse)
 library(FactoMineR)  
 library(factoextra)  
 
-data <- read.csv("2 DATA_FOR_ML.csv",header = T,row.names = 1)
+data <- read.csv("DATA_FOR_ML.csv",header = T,row.names = 1)
 # Univariate_analysis_wilcoxon_test ############################################
 var_class <- c(
   'gender','admission_type','insurance','marital_status','race',
@@ -34,7 +34,6 @@ table <- CreateTableOne(vars = colnames(data)[1:103],
                         strata = 'OS_26DAY',
                         addOverall = F)
 result <- print(table, showAllLevels = T)
-write.csv(result, "./2_Data_Preprocessing/1.1_univariate_analysis_wilcoxon_test.csv", row.names = FALSE)
 
 # Univariate_Multivariate_Regression ############################################
 CreateTableOne(data = data)
@@ -44,7 +43,6 @@ catVars <- c('gender','admission_type','insurance','marital_status','race',"myoc
 
 tab4 <- CreateTableOne(vars = myVars, strata = "OS_26DAY" , data = data, factorVars = catVars, addOverall = TRUE)
 tab4Mat <- print(tab4, nonnormal = "OS_26DAY" , exact = "extent", smd = TRUE, quote = FALSE,noSpaces = TRUE)
-write.csv(tab4Mat, file = "./2_Data_Preprocessing/1_Univariate_Multivariate_Regression.csv", row.names = FALSE)  
 
 # 2.3 Multicollinearity ############################################
 lm_model <- lm(OS_26DAY ~ gender+admission_type+insurance+marital_status+race+age+heart_rate_min+heart_rate_max+sbp_min+sbp_max+dbp_min+dbp_max+mbp_min+mbp_max+resp_rate_min+resp_rate_max+temperature_min+temperature_max+spo2_min+urineoutput+lactate_min+lactate_max+ph_min+ph_max+po2_min+po2_max+pco2_min+pco2_max+aado2_calc_min+aado2_calc_max+baseexcess_min+baseexcess_max+totalco2_min+totalco2_max+platelets_min+platelets_max+wbc_min+wbc_max+aniongap_min+aniongap_max+bun_min+bun_max+creatinine_min+creatinine_max+abs_basophils_min+abs_basophils_max+abs_eosinophils_min+abs_eosinophils_max+abs_lymphocytes_min+abs_lymphocytes_max+abs_monocytes_min+abs_monocytes_max+abs_neutrophils_min+abs_neutrophils_max+inr_min+inr_max+pt_min+pt_max+ptt_min+ptt_max+alt_min+alt_max+alp_min+alp_max+ast_min+ast_max+bilirubin_total_min+bilirubin_total_max+hematocrit_min+hematocrit_max+bicarbonate_min+bicarbonate_max+glucose_min+glucose_max+hemoglobin_min+hemoglobin_max+calcium_min+calcium_max+potassium_min+potassium_max+sodium_min+sodium_max+myocardial_infarct+congestive_heart_failure+peripheral_vascular_disease+cerebrovascular_disease+dementia+chronic_pulmonary_disease+rheumatic_disease+peptic_ulcer_disease+mild_liver_disease+diabetes_without_cc+diabetes_with_cc+paraplegia+renal_disease+malignant_cancer+severe_liver_disease+metastatic_solid_tumor+aids,
@@ -77,7 +75,6 @@ tmp$lambda <- fit$lambda[tmp$variable+1]
 tmp$norm <- apply(abs(x[-1,]), 2, sum)[tmp$variable+1] 
 
 # Plot LASSO regression curve
-pdf("./2_Data_Preprocessing/1.3_LASSO_Regression_Curve.pdf", width = 8, height = 8)
 ggplot(tmp,aes(log(lambda),value,color = coef)) + 
   geom_vline(xintercept = log(cvfit$lambda.min),size=0.8,color='grey60',alpha=0.8,linetype=2)+
   geom_line(size=1) + xlab("Lambda (log scale)") + ylab('Coefficients')+ 
@@ -92,14 +89,12 @@ ggplot(tmp,aes(log(lambda),value,color = coef)) +
         legend.position = 'none')+ 
   annotate('text',x = -4,y=12,label='Optimal Lambda = 0.0135',color='black')+ 
   guides(col=guide_legend(ncol = 2))
-dev.off()
 
 xx <- data.frame(lambda=cvfit[["lambda"]],cvm=cvfit[["cvm"]],cvsd=cvfit[["cvsd"]], cvup=cvfit[["cvup"]],cvlo=cvfit[["cvlo"]],nozezo=cvfit[["nzero"]]) 
 xx$ll<- log(xx$lambda) 
 xx$NZERO<- paste0(xx$nozezo,' vars')
 
 # Generate 10-fold cross-validation plot for LASSO regression
-pdf("./2_Data_Preprocessing/1.3_LASSO_Regression_10fold_CV_Plot.pdf")
 ggplot(xx,aes(ll,cvm,color=NZERO))+ 
   geom_errorbar(aes(x=ll,ymin=cvlo,ymax=cvup), width=0.05,size=1)+ 
   geom_vline(xintercept = xx$ll[which.min(xx$cvm)],size=0.8,color='grey60',alpha=0.8,
@@ -118,14 +113,11 @@ ggplot(xx,aes(ll,cvm,color=NZERO))+
         legend.position = 'none')+ 
   annotate('text',x= -4,y=0.4,label='Optimal Lambda = 0.0135',color='black')+ 
   guides(col=guide_legend(ncol = 6))
-dev.off()
 
 # data save #######################################################
-cvfit$lambda.min
 myCoefs <- coef(cvfit, s="lambda.min")
 lasso_fea <- myCoefs@Dimnames[[1]][which(as.logical(myCoefs != 0))]
 (lasso_fea <- lasso_fea[-1])
-write.csv(lasso_fea, "./2_Data_Preprocessing/1.3_lasso_selected_features.csv")  
 
 # Checking for Multicollinearity
 data_lasso <- as.data.frame(data[,lasso_fea[2:33]])
@@ -136,12 +128,10 @@ data_numeric <- as.data.frame(lapply(data_lasso, function(x) {
     return(as.numeric(as.factor(x)))
   }
 }))
-head(data_lasso)
 XX<-cor(data_numeric)
 kappa(XX,exact=TRUE)
 
 data_ready <- cbind(OS_26DAY = data$OS_26DAY,data_numeric)
-write.csv(data_ready, "./2. Data Preprocessing/1.3 Lasso Feature Selection for ML.csv")
 
 # 3. PCA ####################################
 pca <- (data_ready[,2:33])
@@ -172,7 +162,6 @@ fviz_pca_ind(pca_plot,
         legend.background = element_blank(),
         legend.position=c(0.85,0.1)
   )
-ggsave(filename = "./2. Data Preprocessing/2. PCA Results.pdf", width = 6, height = 6, device = "pdf", family = "Times")
 
 
 
